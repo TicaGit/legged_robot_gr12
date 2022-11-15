@@ -67,7 +67,7 @@ cpg = HopfNetwork(time_step=TIME_STEP)
 TEST_STEPS = int(10 / (TIME_STEP))
 t = np.arange(TEST_STEPS)*TIME_STEP
 
-# [TODO] initialize data structures to save CPG and robot states
+# a faire [TODO] initialize data structures to save CPG and robot states
 
 
 ############## Sample Gains
@@ -78,34 +78,35 @@ kd=np.array([2,2,2])
 kpCartesian = np.diag([500]*3)
 kdCartesian = np.diag([20]*3)
 
-for j in range(TEST_STEPS):
+for j in range(TEST_STEPS): #me : on est dans le ref de chanque patte = son point d'attache = 0,0,0
   # initialize torque array to send to motors
   action = np.zeros(12) 
   # get desired foot positions from CPG 
   xs,zs = cpg.update()
-  # [TODO] get current motor angles and velocities for joint PD, see GetMotorAngles(), GetMotorVelocities() in quadruped.py
-  # q = env.robot.GetMotorAngles()
-  # dq = 
+  # done [TODO] get current motor angles and velocities for joint PD, see GetMotorAngles(), GetMotorVelocities() in quadruped.py
+  q = env.robot.GetMotorAngles()
+  dq = env.robot.GetMotorVelocities()
 
   # loop through desired foot positions and calculate torques
   for i in range(4):
     # initialize torques for legi
     tau = np.zeros(3)
     # get desired foot i pos (xi, yi, zi) in leg frame
-    leg_xyz = np.array([xs[i],sideSign[i] * foot_y,zs[i]])
+    leg_xyz = np.array([xs[i], sideSign[i] * foot_y, zs[i]])
     # call inverse kinematics to get corresponding joint angles (see ComputeInverseKinematics() in quadruped.py)
-    leg_q = np.zeros(3) # [TODO] 
+    leg_q = env.robot.ComputeInverseKinematics(i, leg_xyz) # done [TODO] 
     # Add joint PD contribution to tau for leg i (Equation 4)
-    tau += np.zeros(3) # [TODO] 
+    tau +=  kp*(leg_q - q[i]) + kd*(0 - dq[i]) # pas sur - [TODO] 
 
     # add Cartesian PD contribution
     if ADD_CARTESIAN_PD:
       # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
-      # [TODO] 
+      # [TODO]
+      J, pos = env.robot.ComputeJacobianAndPosition(i)
       # Get current foot velocity in leg frame (Equation 2)
-      # [TODO] 
+      v = J@dq
       # Calculate torque contribution from Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-      tau += np.zeros(3) # [TODO]
+      tau += J.T@(kpCartesian*(leg_xyz - pos) + kdCartesian*(0 - v)) #done [TODO]
 
     # Set tau for legi in action vector
     action[3*i:3*i+3] = tau
@@ -113,7 +114,7 @@ for j in range(TEST_STEPS):
   # send torques to robot and simulate TIME_STEP seconds 
   env.step(action) 
 
-  # [TODO] save any CPG or robot states
+  # a faire [TODO] save any CPG or robot states
 
 
 
