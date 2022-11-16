@@ -46,7 +46,7 @@ from env.hopf_network import HopfNetwork
 from env.quadruped_gym_env import QuadrupedGymEnv
 
 
-ADD_CARTESIAN_PD = True
+ADD_CARTESIAN_PD = False
 TIME_STEP = 0.001
 foot_y = 0.0838 # this is the hip length 
 sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
@@ -62,20 +62,30 @@ env = QuadrupedGymEnv(render=True,              # visualize
                     )
 
 # initialize Hopf Network, supply gait
-cpg = HopfNetwork(time_step=TIME_STEP)
+gait = "WALK"
+cpg = HopfNetwork(time_step=TIME_STEP, gait = gait)
 
-TEST_STEPS = int(10 / (TIME_STEP))
+TIME_SIMULATION = 3 #was 10s
+TEST_STEPS = int(TIME_SIMULATION / (TIME_STEP)) 
 t = np.arange(TEST_STEPS)*TIME_STEP
 
-# a faire [TODO] initialize data structures to save CPG and robot states
+# done[TODO] initialize data structures to save CPG and robot states
+#task 1
+r_list = np.zeros([TEST_STEPS,4])
+theta_list = np.zeros([TEST_STEPS,4])
+dr_list = np.zeros([TEST_STEPS,4])
+dtheta_list = np.zeros([TEST_STEPS,4])
 
+#task 2
+pos_leg_0 = np.zeros([TEST_STEPS,3])
+des_pos_leg_0 = np.zeros([TEST_STEPS,3])
 
 ############## Sample Gains
 # joint PD gains
-kp=np.array([100,100,100])
+kp=np.array([100,100,100]) #base : 100 100 100
 kd=np.array([2,2,2])
 # Cartesian PD gains
-kpCartesian = np.diag([500]*3)
+kpCartesian = np.diag([500]*3) #base : np.diag([500]*3)
 kdCartesian = np.diag([20]*3)
 
 for j in range(TEST_STEPS): #me : on est dans le ref de chanque patte = son point d'attache = 0,0,0
@@ -96,25 +106,38 @@ for j in range(TEST_STEPS): #me : on est dans le ref de chanque patte = son poin
     # call inverse kinematics to get corresponding joint angles (see ComputeInverseKinematics() in quadruped.py)
     leg_q = env.robot.ComputeInverseKinematics(i, leg_xyz) # done [TODO] 
     # Add joint PD contribution to tau for leg i (Equation 4)
-    tau +=  kp*(leg_q - q[i]) + kd*(0 - dq[i]) # pas sur - [TODO] 
+    tau +=  kp*(leg_q - q[3*i:3*(i+1)]) + kd*(0 - dq[3*i:3*(i+1)]) # pas sur - [TODO] 
+
+    # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
+    # done [TODO]
+    J, pos = env.robot.ComputeJacobianAndPosition(i)
 
     # add Cartesian PD contribution
     if ADD_CARTESIAN_PD:
-      # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
-      # [TODO]
-      J, pos = env.robot.ComputeJacobianAndPosition(i)
       # Get current foot velocity in leg frame (Equation 2)
-      v = J@dq
+      v = J@dq[3*i:3*(i+1)]
       # Calculate torque contribution from Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-      tau += J.T@(kpCartesian*(leg_xyz - pos) + kdCartesian*(0 - v)) #done [TODO]
+      tau += J.T@(kpCartesian@(leg_xyz - pos) + kdCartesian@(0 - v)) #done [TODO]
 
     # Set tau for legi in action vector
     action[3*i:3*i+3] = tau
 
+    #record for task 2
+    if i == 0: #record only leg 0
+      pos_leg_0[j,:] = pos
+      des_pos_leg_0[j,:] = leg_xyz
+
+
   # send torques to robot and simulate TIME_STEP seconds 
   env.step(action) 
 
-  # a faire [TODO] save any CPG or robot states
+  # done [TODO] save any CPG or robot states
+  r_list[j,:] = cpg.get_r()
+  theta_list[j,:] = cpg.get_theta()
+  dr_list[j,:] = cpg.get_dr()
+  dtheta_list[j,:] = cpg.get_dtheta()
+
+
 
 
 
@@ -122,7 +145,51 @@ for j in range(TEST_STEPS): #me : on est dans le ref de chanque patte = son poin
 # PLOTS
 #####################################################
 # example
-# fig = plt.figure()
-# plt.plot(t,joint_pos[1,:], label='FR thigh')
-# plt.legend()
+
+### task 1 ###
+# fig, axs = plt.subplots(2,2, figsize = (8,6))
+# fig.tight_layout(pad = 3.5, w_pad = 1., h_pad=3.0)
+# for k in range(4):
+#   # plt.subplot(2,2,k)
+#   # plt.plot(t,r_list[:,k], label='lenght', color = "r")
+#   # plt.plot(t,theta_list[:,k], label='theta', color = "b")
+#   # plt.legend()
+#   # plt.title("leg", k)
+#   ax = axs[int(np.floor(k/2)), k%2]
+#   ax.plot(t,r_list[:,k], label='r', color = "r")
+#   ax.plot(t,theta_list[:,k], label=r"$\theta$", color = "b")
+#   ax.plot(t,dr_list[:,k], label=r"$\dot{r}$", color = "orange")
+#   ax.plot(t,dtheta_list[:,k], label=r"$\dot{\theta}$", color = "g")
+#   ax.legend(loc="upper right")
+#   ax.set_title(f"leg {k}")
+#   ax.set_xlabel("Time")
+#   ax.set_ylabel("Amplitude / phase")
+
+# fig.suptitle(r"Parameters r, $\theta$, $\dot{r}$, $\dot{\theta}$ for all four legs in " + gait.lower() + r" mode") #u03B8
+# fig.show()
 # plt.show()
+
+### task 2 ###
+dic = {0:"x", 1:"y", 2:"z"}
+fig, axs = plt.subplots(3,1, figsize = (8,6))
+fig.tight_layout(pad = 3.5, w_pad = 1., h_pad=3.0)
+for k in [0,1,2]:
+  # plt.subplot(2,2,k)
+  # plt.plot(t,r_list[:,k], label='lenght', color = "r")
+  # plt.plot(t,theta_list[:,k], label='theta', color = "b")
+  # plt.legend()
+  # plt.title("leg", k)
+  ax = axs[k%3]
+  ax.plot(t,pos_leg_0[:,k], label="real foot position", color = "r")
+  ax.plot(t,des_pos_leg_0[:,k], label="desired foot position", color = "b")
+
+  ax.legend(loc="upper right")
+  ax.set_title(f"component : {dic[k]}")
+  ax.set_xlabel("Time")
+  ax.set_ylabel("Position")
+
+  ax.set_xlim([2,3]) #in second
+
+fig.suptitle("Comparison desired vs real foot postion") #u03B8
+fig.show()
+plt.show()
