@@ -57,8 +57,8 @@ USE_GPU = True # make sure to install all necessary drivers
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "LR_COURSE_OBS"}
 env_configs = {"motor_control_mode":"CPG",
-               "task_env": "LR_COURSE_TASK",
-               "observation_space_mode": "LR_COURSE_OBS"}
+               "task_env": "FWD_LOCOMOTION",
+               "observation_space_mode": "DEFAULT"}
 
 if USE_GPU and LEARNING_ALG=="SAC":
     gpu_arg = "auto" 
@@ -66,7 +66,9 @@ else:
     gpu_arg = "cpu"
 
 if USE_GPU and LEARNING_ALG=="PPO":
-    gpu_arg = "cuda" 
+    gpu_arg = 'cuda' 
+
+print(gpu_arg)
 
 if LOAD_NN:
     interm_dir = "./logs/intermediate_models/"
