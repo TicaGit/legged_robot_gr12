@@ -105,9 +105,9 @@ class QuadrupedGymEnv(gym.Env):
       action_repeat=10,  
       distance_weight=2,
       energy_weight=0.008,
-      motor_control_mode="PD",
-      task_env="FWD_LOCOMOTION",
-      observation_space_mode="DEFAULT",
+      motor_control_mode="PD",          #ca
+      task_env="FWD_LOCOMOTION",        #ca
+      observation_space_mode="DEFAULT", #ca
       on_rack=False,
       render=False,
       record_video=False,
