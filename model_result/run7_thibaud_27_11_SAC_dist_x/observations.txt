@@ -1,0 +1,7 @@
+used SAC 
+
+very weird 
+
+take about 20h to train, qt 14fps
+
+performence very bad at the end, go down

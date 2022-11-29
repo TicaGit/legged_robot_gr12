@@ -1,0 +1,3 @@
+vel 1 -> 0.5
+
+new term penalize y position

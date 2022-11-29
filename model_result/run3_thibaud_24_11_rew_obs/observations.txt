@@ -1,0 +1,11 @@
+no improovements after 600-700 k iter
+
+robot slips
+
+try to tweek weight in reward function, increase base speed 0.5-> 1
+
+incresae obs space 
+
+new rew function -> inspired by paper guillaume gpg
+
+remoove coupling

@@ -237,9 +237,9 @@ class HopfNetwork():
       theta_dot = self._omega_rl[i] # [TODO]
 
       # loop through other oscillators to add coupling (Equation 7)
-      if self._couple:
-        for j in range(3 + 1):
-          theta_dot += X_prev[0,j]*self._coupling_strength*np.sin(X_prev[1,j] - theta - self.PHI_trot[i,j]) # done [TODO]
+      # if self._couple:
+      #   for j in range(3 + 1):
+      #     theta_dot += X_prev[0,j]*self._coupling_strength*np.sin(X_prev[1,j] - theta - self.PHI_trot[i,j]) # done [TODO]
 
 
       X_dot[:,i] = [r_dot, theta_dot]
