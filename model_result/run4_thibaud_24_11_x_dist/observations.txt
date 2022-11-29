@@ -1,0 +1,3 @@
+doesn't learn
+
+maybe x_dist is bad -> try w/out, was with coef 5 -> too high propably

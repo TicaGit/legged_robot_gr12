@@ -1,0 +1,1 @@
+was with base param, only noise added during training ( std = 0.02)

@@ -55,10 +55,15 @@ from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
 
-LEARNING_ALG = "PPO"
+LEARNING_ALG = "SAC"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
-log_dir = interm_dir + '112222132502'
+log_dir = interm_dir + '112622233534'
+
+custom = True
+if custom:
+    log_dir = "./model_result/"
+    log_dir = log_dir + "run7_thibaud_27_11_SAC_dist_x"
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
@@ -68,6 +73,10 @@ env_config['render'] = True
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 # env_config['competition_env'] = True
+
+#added
+env_config["task_env"] = "LR_COURSE_TASK"       
+env_config["observation_space_mode"] = "LR_COURSE_OBS"
 
 # get latest model and normalization stats, and plot 
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
@@ -94,10 +103,12 @@ print("\nLoaded model", model_name, "\n")
 obs = env.reset()
 episode_reward = 0
 
+N = 1000
+
 # [TODO] initialize arrays to save data from simulation 
+pos_list = np.zeros((N,3))
 
-
-for i in range(2000):
+for i in range(N):
     action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
     obs, rewards, dones, info = env.step(action)
     episode_reward += rewards
@@ -108,6 +119,27 @@ for i in range(2000):
 
     # [TODO] save data from current robot states for plots 
     # To get base position, for example: env.envs[0].env.robot.GetBasePosition() 
-    #
+    p = env.envs[0].env.robot.GetBasePosition()
+    pos_list[i,:] = p
     
 # [TODO] make plots:
+dic = {0:"x", 1:"y", 2:"z"}
+fig, axs = plt.subplots(3,1, figsize = (10,6))
+fig.tight_layout(pad = 3.5, w_pad = 1., h_pad=3.0)
+for k in range(3):
+  # plt.subplot(2,2,k)
+  # plt.plot(t,r_list[:,k], label='lenght', color = "r")
+  # plt.plot(t,theta_list[:,k], label='theta', color = "b")
+  # plt.legend()
+  # plt.title("leg", k)
+  ax = axs[k]
+  ax.plot(pos_list[:,k], label='position', color = "r")
+  ax.legend(loc="upper right")
+  ax.set_title(f"{dic[k]} - position")
+  ax.set_xlabel("Time")
+  ax.set_ylabel("Position")
+
+fig.suptitle("Position of robot") #u03B8
+fig.show()
+plt.show()
+pass
