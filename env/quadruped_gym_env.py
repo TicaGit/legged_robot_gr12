@@ -102,9 +102,17 @@ class QuadrupedGymEnv(gym.Env):
       robot_config=robot_config,
       isRLGymInterface=True,
       time_step=0.001,
-      action_repeat=10,  
+      action_repeat=10, 
+
       distance_weight=2,
-      energy_weight=0.008,
+      energy_weight=0.01,
+      yaw_weight=0.05,
+      drift_weight=0.3,
+      z_oscillation_weight = 2,
+      y_offset_weight = 0.05,
+      straightness_weight = 0.1,
+      vel_tracking_weight = 0.075,
+
       motor_control_mode="PD",          #ca
       task_env="FWD_LOCOMOTION",        #ca
       observation_space_mode="DEFAULT", #ca
@@ -142,8 +150,17 @@ class QuadrupedGymEnv(gym.Env):
     self._isRLGymInterface = isRLGymInterface
     self._time_step = time_step
     self._action_repeat = action_repeat
+
     self._distance_weight = distance_weight
     self._energy_weight = energy_weight
+    self._yaw_weight = yaw_weight
+    self._drift_weight = drift_weight
+    self._z_oscillation_weight = z_oscillation_weight
+    self._y_offset_weight = y_offset_weight
+    self._straightness_weight = straightness_weight
+    self._vel_tracking_weight = vel_tracking_weight
+
+
     self._motor_control_mode = motor_control_mode
     self._TASK_ENV = task_env
     self._observation_space_mode = observation_space_mode
@@ -326,11 +343,11 @@ class QuadrupedGymEnv(gym.Env):
     xyz = self.robot.GetBasePosition()
     xyz_vel = self.robot.GetBaseLinearVelocity()
     # track the desired velocity 
-    vel_tracking_reward = 0.075 * np.exp( -1/ 0.25 *  (xyz_vel[0] - des_vel_x)**2 )
+    vel_tracking_reward = self._vel_tracking_weight * np.exp( -1/ 0.25 *  (xyz_vel[0] - des_vel_x)**2 )
     # minimize yaw (go straight) - MODIF
-    yaw_reward = 0.05 * np.exp( -1/ 0.25 * (self.robot.GetBaseOrientationRollPitchYaw()[2] - 0.0)**2)
+    yaw_reward = self._yaw_weight * np.exp( -1/ 0.25 * (self.robot.GetBaseOrientationRollPitchYaw()[2] - 0.0)**2)
     # don't drift laterally on speed !!! - MODIF
-    drift_reward = 0.3 * np.exp( -1/ 0.25 *  (xyz_vel[1] - 0.0)**2 )
+    drift_reward = self._drift_weight * np.exp( -1/ 0.25 *  (xyz_vel[1] - 0.0)**2 )
     # minimize energy 
     energy_reward = 0 
     for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
@@ -338,10 +355,10 @@ class QuadrupedGymEnv(gym.Env):
 
     #NEW
     #penalize z oscilations
-    z_oscil_reward = -2 * (xyz_vel[2] - 0)**2 
+    z_oscil_reward = -self._z_oscillation_weight * (xyz_vel[2] - 0)**2 
 
-    x_dist_reward = 0.1* xyz[0]
-    y_pos_penalty = - 0.05* xyz[1]
+    #x_dist_reward = 0.1* xyz[0]
+    y_pos_penalty = - self._y_offset_weight * abs(xyz[1])
 
     
 
@@ -349,10 +366,9 @@ class QuadrupedGymEnv(gym.Env):
             + yaw_reward \
             + drift_reward \
             + z_oscil_reward \
-            + x_dist_reward \
             + y_pos_penalty \
-            - 0.01 * energy_reward \
-            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
+            - self._energy_weight * energy_reward \
+            - self._straightness_weight * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
 
     return max(reward,0) # keep rewards positive
 
