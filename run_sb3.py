@@ -36,6 +36,8 @@ Check the documentation! https://stable-baselines3.readthedocs.io/en/master/
 """
 import os
 from datetime import datetime
+import sys
+import getopt
 # stable baselines 3
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3 import PPO, SAC
@@ -65,6 +67,30 @@ env_configs = {"motor_control_mode":"CPG",
                "straightness_weight": 0.1,
                "vel_tracking_weight": 0.075}
 
+argv = sys.argv[1:]
+try:
+    opts, args = getopt.getopt(argv, "", ["energy_weight=", "yaw_weight=", "drift_weight=", "z_oscillation_weight=", "y_offset_weight=", "straightness_weight=", "vel_tracking_weight="])
+except:
+    print("Error")
+
+for opt, arg in opts:
+    if opt in ["--energy_weight"]:
+        env_configs["energy_weight"] = float(arg)
+    elif opt in ["--yaw_weight"]:
+        env_configs["yaw_weight"] = float(arg)
+    elif opt in ['-d', '--drift_weight']:
+        env_configs["drift_weight"] = float(arg)
+    elif opt in ['-z', '--z_oscillation_weight']:
+        env_configs["z_oscillation_weight"] = float(arg)
+    elif opt in ['-y', '--y_offset_weight']:
+        env_configs["y_offset_weight"] = float(arg)
+    elif opt in ['-s', '--straightness_weight']:
+        env_configs["straightness_weight"] = float(arg)
+    elif opt in ['-v', '--vel_tracking_weight']:
+        env_configs["vel_tracking_weight"] = float(arg)
+
+print(env_configs)
+
 # env_configs = {"motor_control_mode":"CPG",
 #                "task_env": "FWD_LOCOMOTION",
 #                "observation_space_mode": "DEFAULT"}
@@ -88,6 +114,9 @@ if LOAD_NN:
 # directory to save policies and normalization parameters
 SAVE_PATH = './logs/intermediate_models/'+ datetime.now().strftime("%m%d%y%H%M%S") + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
+file = open(SAVE_PATH+'env_config.txt', 'w')
+file.write(str(env_configs))
+file.close()
 # checkpoint to save policy network periodically
 checkpoint_callback = CheckpointCallback(save_freq=30000, save_path=SAVE_PATH,name_prefix='rl_model', verbose=2)
 # create Vectorized gym environment
