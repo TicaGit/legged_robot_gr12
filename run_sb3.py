@@ -112,7 +112,7 @@ if LOAD_NN:
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-SAVE_PATH = './logs/intermediate_models/'+ datetime.now().strftime("%m%d%y%H%M%S") + '/'
+SAVE_PATH = './logs/intermediate_models/'+ datetime.now().strftime("%m%d%y%H%M%S%f") + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 file = open(SAVE_PATH+'env_config.txt', 'w')
 file.write(str(env_configs))
@@ -183,7 +183,7 @@ if LOAD_NN:
     print("\nLoaded model", model_name, "\n")
 
 # Learn and save (may need to train for longer)
-model.learn(total_timesteps=1000000, log_interval=1,callback=checkpoint_callback)
+model.learn(total_timesteps=600000, log_interval=1,callback=checkpoint_callback)
 # Don't forget to save the VecNormalize statistics when saving the agent
 model.save( os.path.join(SAVE_PATH, "rl_model" ) ) 
 env.save(os.path.join(SAVE_PATH, "vec_normalize.pkl" )) 
