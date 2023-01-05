@@ -55,12 +55,12 @@ from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
 
-LEARNING_ALG = "SAC"
+LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
-log_dir = interm_dir + '112622233534'
+log_dir = interm_dir + 'run2_julien_default_obs_space_PPO'
 
-custom = True
+custom = False
 if custom:
     log_dir = "./model_result/"
     log_dir = log_dir + "run7_thibaud_27_11_SAC_dist_x"
@@ -76,7 +76,7 @@ env_config['add_noise'] = False
 
 #added
 env_config["task_env"] = "LR_COURSE_TASK"       
-env_config["observation_space_mode"] = "LR_COURSE_OBS"
+env_config["observation_space_mode"] = "DEFAULT"
 
 # get latest model and normalization stats, and plot 
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
