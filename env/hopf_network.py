@@ -133,12 +133,12 @@ class HopfNetwork():
       raise ValueError( gait + 'not implemented.')
 
 
-  def update(self, it):
+  def update(self):
     """ Update oscillator states. """
 
     # update parameters, integrate
     if not self.use_RL:
-      self._integrate_hopf_equations(it = it)
+      self._integrate_hopf_equations()
     else:
       self._integrate_hopf_equations_rl()
     
@@ -161,7 +161,7 @@ class HopfNetwork():
 
       
         
-  def _integrate_hopf_equations(self, it):
+  def _integrate_hopf_equations(self):
     """ Hopf polar equations and integration. Use equations 6 and 7. """
     # bookkeeping - save copies of current CPG states 
     X_prev = self.X.copy()

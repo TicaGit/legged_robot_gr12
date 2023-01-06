@@ -129,7 +129,7 @@ for j in range(TEST_STEPS): #me : on est dans le ref de chanque patte = son poin
   # initialize torque array to send to motors
   action = np.zeros(12)
   # get desired foot positions from CPG
-  xs,zs = cpg.update(j)
+  xs,zs = cpg.update()
   # done [TODO] get current motor angles and velocities for joint PD, see GetMotorAngles(), GetMotorVelocities() in quadruped.py
   q = env.robot.GetMotorAngles()
   dq = env.robot.GetMotorVelocities()
