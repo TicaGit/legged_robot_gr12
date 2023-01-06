@@ -49,8 +49,8 @@ class HopfNetwork():
   """
   def __init__(self,
                 mu=1**2,                 # intrinsic amplitude, converges to sqrt(mu)
-                omega_swing=5*2*np.pi,   # frequency in swing phase (can edit)        #me : pretuned
-                omega_stance=2*2*np.pi,  # frequency in stance phase (can edit)       #me : pretuned
+                omega_swing=5*2*np.pi,   # frequency in swing phase (can edit)        #me : pretuned was 5
+                omega_stance=2*2*np.pi,  # frequency in stance phase (can edit)       #me : pretuned was 2
                 gait="TROT",             # Gait, can be TROT, WALK, PACE, BOUND, etc.
                 alpha=50,                # amplitude convergence factor
                 coupling_strength=1,     # coefficient to multiply coupling matrix
@@ -68,6 +68,7 @@ class HopfNetwork():
     # initialize CPG data structures: amplitude is row 0, and phase is row 1
     self.X = np.zeros((2,4))
     self.X_dot = np.zeros((2,4))
+
 
     # save parameters 
     self._mu = mu
@@ -132,12 +133,12 @@ class HopfNetwork():
       raise ValueError( gait + 'not implemented.')
 
 
-  def update(self):
+  def update(self, it):
     """ Update oscillator states. """
 
     # update parameters, integrate
     if not self.use_RL:
-      self._integrate_hopf_equations()
+      self._integrate_hopf_equations(it = it)
     else:
       self._integrate_hopf_equations_rl()
     
@@ -160,7 +161,7 @@ class HopfNetwork():
 
       
         
-  def _integrate_hopf_equations(self):
+  def _integrate_hopf_equations(self, it):
     """ Hopf polar equations and integration. Use equations 6 and 7. """
     # bookkeeping - save copies of current CPG states 
     X_prev = self.X.copy()
@@ -175,9 +176,13 @@ class HopfNetwork():
       # compute r_dot (Equation 6)
       r_dot = self._alpha*(self._mu - r**2)*r # done [TODO]
       # determine whether oscillator i is in swing or stance phase to set natural frequency omega_swing or omega_stance (see Section 3)
+      # should be gate dependent ?? -> tune : if "TROT" : then ...
       theta_dot = self._omega_stance # [TODO]
       if np.sin(theta) >= 0:
         theta_dot = self._omega_swing
+
+      #trying to smooth out start -> not working well
+      #theta_dot = theta_dot*min(1, it/1000)
 
       # loop through other oscillators to add coupling (Equation 7)
       if self._couple:
@@ -248,3 +253,15 @@ class HopfNetwork():
     self.X = X_prev + (X_dot_prev + X_dot) * self._dt / 2
     self.X_dot = X_dot
     self.X[1,:] = self.X[1,:] % (2*np.pi)
+
+
+    ###################### Helper functions for setting CPG States (to change them mid-simulation)
+  def set_gait(self, gait, omega_stance = None, omega_swing = None, des_step_len = None):
+    self._set_gait(gait)
+    self.X[1,:] = self.PHI[0,:]
+    if omega_stance is not None:
+      self._omega_stance = omega_stance
+    if omega_swing is not None:
+      self._omega_swing = omega_swing
+    if omega_swing is not None:
+      self._des_step_len = des_step_len
