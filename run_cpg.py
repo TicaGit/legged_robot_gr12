@@ -63,16 +63,24 @@ env = QuadrupedGymEnv(render=True,              # visualize
                     )
 
 # initialize Hopf Network, supply gait
-gait = "BOUND"
+
 #sketshy BOUND :
 #cpg = HopfNetwork(time_step=TIME_STEP, gait = "BOUND", omega_swing=1.2*2*np.pi, omega_stance=1.9*2*np.pi,  des_step_len = 0.12, robot_height=0.25, ground_penetration=0.03)
-#real BOUND : 
+#real BOUND - not working: 
 #cpg = HopfNetwork(time_step=TIME_STEP, gait = "BOUND", omega_swing=2.3*2*np.pi, omega_stance=2.3*2*np.pi,  des_step_len = 0.13, robot_height=0.23, ground_penetration=0.01)
 #WALK
-cpg = HopfNetwork(time_step=TIME_STEP, gait = "WALK", omega_swing=2.5*2*np.pi, omega_stance=1.5*2*np.pi,  des_step_len = 0.08, robot_height=0.22)
+#cpg = HopfNetwork(time_step=TIME_STEP, gait = "WALK", omega_swing=5*2*np.pi, omega_stance=2*2*np.pi,  des_step_len = 0.12, robot_height=0.30)
+#PACE
+#cpg = HopfNetwork(time_step=TIME_STEP, gait = "PACE", omega_swing=5*2*np.pi, omega_stance=2*2*np.pi,  des_step_len = 0.06, robot_height=0.25)
+#TROT HIGH
+#cpg = HopfNetwork(time_step=TIME_STEP, gait = "TROT", omega_swing=5.5*2*np.pi, omega_stance=2.2*2*np.pi,  des_step_len = 0.09, robot_height=0.30)
+#TROT LOW
+#cpg = HopfNetwork(time_step=TIME_STEP, gait = "TROT", omega_swing=4*2*np.pi, omega_stance=2*2*np.pi,  des_step_len = 0.01, robot_height=0.30)
 
-#cpg = HopfNetwork(time_step=TIME_STEP, gait = gait, omega_swing=5*2*np.pi, omega_stance=2*2*np.pi, des_step_len = 0.09)
-TIME_SIMULATION = 8 #was 10s do 3 to plot
+gait = "TROT"
+cpg = HopfNetwork(time_step=TIME_STEP, gait = gait, omega_swing=5*2*np.pi, omega_stance=2*2*np.pi, des_step_len = 0.09)
+
+TIME_SIMULATION = 3 #was 8s do 3 to plot
 TEST_STEPS = int(TIME_SIMULATION / (TIME_STEP))
 t = np.arange(TEST_STEPS)*TIME_STEP
 
@@ -104,11 +112,12 @@ end_swing = 0
 ############## Sample Gains
 # joint PD gains
 kp=np.array([400]*3) #base : 100 100 100
-#kd=np.array([6]*3) #base : 2
-kd=np.array([2]*3) #base : 2
+kd=np.array([6]*3) #base : 2
+
 # Cartesian PD gains
 kpCartesian = np.diag([3000]*3) #base : np.diag([500]*3)
 kdCartesian = np.diag([60]*3) #base : 20
+kdCartesian[1,1] = 200
 
 for j in range(TEST_STEPS): #me : on est dans le ref de chanque patte = son point d'attache = 0,0,0
 
@@ -140,7 +149,7 @@ for j in range(TEST_STEPS): #me : on est dans le ref de chanque patte = son poin
 
     if ADD_JOINT_PD:
       # Add joint PD contribution to tau for leg i (Equation 4)
-      tau +=  kp*(leg_q - q[3*i:3*(i+1)]) + kd*(0 - dq[3*i:3*(i+1)]) # pas sur - [TODO]
+      tau +=  kp*(leg_q - q[3*i:3*(i+1)]) + kd*(0 - dq[3*i:3*(i+1)]) # done [TODO]
 
     # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
     # done [TODO]
@@ -193,6 +202,7 @@ for j in range(TEST_STEPS): #me : on est dans le ref de chanque patte = son poin
     ctr_step_dur += 1
   if np.sin(cpg.get_theta()[0]) <= 0 and ctr_step_dur == 2:
     end_swing = j
+    start_stance = j
     ctr_step_dur += 1
   if np.sin(cpg.get_theta()[0]) >= 0 and ctr_step_dur == 3:
     end_stance = j
@@ -248,29 +258,29 @@ else:
 # plt.show()
 
 ### task 2 ###
-# dic = {0:"x", 1:"y", 2:"z"}
-# fig, axs = plt.subplots(3,1, figsize = (8,6))
-# fig.tight_layout(pad = 5., w_pad = 1., h_pad=3.0)
-# for k in [0,1,2]:
-#   # plt.subplot(2,2,k)
-#   # plt.plot(t,r_list[:,k], label='lenght', color = "r")
-#   # plt.plot(t,theta_list[:,k], label='theta', color = "b")
-#   # plt.legend()
-#   # plt.title("leg", k)
-#   ax = axs[k%3]
-#   ax.plot(t,pos_leg_0[:,k], label="real foot position", color = "r")
-#   ax.plot(t,des_pos_leg_0[:,k], label="desired foot position", color = "b")
+dic = {0:"x", 1:"y", 2:"z"}
+fig, axs = plt.subplots(3,1, figsize = (8,6))
+fig.tight_layout(pad = 5., w_pad = 1., h_pad=3.0)
+for k in [0,1,2]:
+  # plt.subplot(2,2,k)
+  # plt.plot(t,r_list[:,k], label='lenght', color = "r")
+  # plt.plot(t,theta_list[:,k], label='theta', color = "b")
+  # plt.legend()
+  # plt.title("leg", k)
+  ax = axs[k%3]
+  ax.plot(t,pos_leg_0[:,k], label="real foot position", color = "r")
+  ax.plot(t,des_pos_leg_0[:,k], label="desired foot position", color = "b")
 
-#   ax.legend(loc="upper right")
-#   ax.set_title(f"component : {dic[k]}")
-#   ax.set_xlabel("Time [s]")
-#   ax.set_ylabel("Position [m]")
+  ax.legend(loc="upper right")
+  ax.set_title(f"component : {dic[k]}")
+  ax.set_xlabel("Time [s]")
+  ax.set_ylabel("Position [m]")
 
-#   ax.set_xlim([2,3]) #in second
+  ax.set_xlim([2,3]) #in second
 
-# fig.suptitle(f"Desired vs real foot position for {gait} gait \n (kp_joint : {kp_joint_draw}, kd_joint : {kd_joint_draw}, kp_cart : {kp_cart_draw}, kp_joint : {kd_cart_draw})") #u03B8
-# fig.show()
-# plt.show()
+fig.suptitle(f"Desired vs real foot position for {gait} gait \n (kp_joint : {kp_joint_draw}, kd_joint : {kd_joint_draw}, kp_cart : {kp_cart_draw}, kp_joint : {kd_cart_draw})") #u03B8
+fig.show()
+plt.show()
 
 ### task 3 ###
 # dic = {0:"hip", 1:"thigh", 2:"calf"}
@@ -310,6 +320,6 @@ print("avg vel : ", avgvel)
 print("avg COT : ", avgCOT)
 print("swing duration : ",(end_swing - start_swing)*TIME_STEP)
 print("stange duration : ",(end_stance - end_swing)*TIME_STEP)
-print("total step duration : ",(end_stance - start_swing)*TIME_STEP)
-print("duty cycle (swing/tot): ", (end_swing - start_swing)/(end_stance - start_swing))
+print("total step duration (duty cycle) : ",(end_stance - start_swing)*TIME_STEP)
+print("duty ratio (stance/swing): ", (end_stance - start_stance)/(end_swing - start_swing))
 print("################################################")
