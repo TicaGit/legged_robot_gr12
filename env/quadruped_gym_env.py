@@ -112,6 +112,7 @@ class QuadrupedGymEnv(gym.Env):
       y_offset_weight = 0.05,
       straightness_weight = 0.1,
       vel_tracking_weight = 0.075,
+      des_vel_x_input = 0.5,
 
       motor_control_mode="PD",          #ca
       task_env="FWD_LOCOMOTION",        #ca
@@ -159,6 +160,7 @@ class QuadrupedGymEnv(gym.Env):
     self._y_offset_weight = y_offset_weight
     self._straightness_weight = straightness_weight
     self._vel_tracking_weight = vel_tracking_weight
+    self._des_vel_x_input = des_vel_x_input
 
 
     self._motor_control_mode = motor_control_mode
@@ -342,6 +344,7 @@ class QuadrupedGymEnv(gym.Env):
 
     xyz = self.robot.GetBasePosition()
     xyz_vel = self.robot.GetBaseLinearVelocity()
+    des_vel_x = self._des_vel_x_input
     # track the desired velocity 
     vel_tracking_reward = self._vel_tracking_weight * np.exp( -1/ 0.25 *  (xyz_vel[0] - des_vel_x)**2 )
     # minimize yaw (go straight) - MODIF
@@ -427,11 +430,12 @@ class QuadrupedGymEnv(gym.Env):
       # get Jacobian and foot position in leg frame for leg i (see ComputeJacobianAndPosition() in quadruped.py)
       J, pos = self.robot.ComputeJacobianAndPosition(i)
       # desired foot position i (from RL above)
-      Pd = des_foot_pos(i)# [TODO]
+      Pd = des_foot_pos[i]# [TODO]
       # desired foot velocity i
       vd = np.zeros(3)
       # foot velocity in leg frame i (Equation 2)
       v = J@qd[3*i:3*(i+1)]
+      tau = np.zeros(3)
       # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
       tau += J.T@(kpCartesian@(Pd - pos) + kdCartesian@(0 - v))
 
@@ -445,7 +449,7 @@ class QuadrupedGymEnv(gym.Env):
     u = np.clip(actions,-1,1)
 
     # scale omega to ranges, and set in CPG (range is an example)
-    omega = self._scale_helper( u[0:4], 5, 4.5*2*np.pi)
+    omega = self._scale_helper( u[0:4], 4, 4.5*2*np.pi)
     self._cpg.set_omega_rl(omega)
 
     # scale mu to ranges, and set in CPG (squared since we converge to the sqrt in the CPG amplitude)

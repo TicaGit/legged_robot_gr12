@@ -54,16 +54,16 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
-
+TIME_STEP = 0.01
 LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
-log_dir = interm_dir + 'run2_julien_default_obs_space_PPO'
+log_dir = interm_dir + '010623192521697399'
 
 custom = False
 if custom:
     log_dir = "./model_result/"
-    log_dir = log_dir + "run7_thibaud_27_11_SAC_dist_x"
+    log_dir = log_dir + "run6_thibaud_25_11_SAC"
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
@@ -76,7 +76,7 @@ env_config['add_noise'] = False
 
 #added
 env_config["task_env"] = "LR_COURSE_TASK"       
-env_config["observation_space_mode"] = "DEFAULT"
+env_config["observation_space_mode"] = "LR_COURSE_OBS"
 
 # get latest model and normalization stats, and plot 
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
@@ -107,6 +107,13 @@ N = 1000
 
 # [TODO] initialize arrays to save data from simulation 
 pos_list = np.zeros((N,3))
+vel_list = np.zeros([N,3])
+power_list = np.zeros([N])
+cot_list = np.zeros([N])
+ctr_step_dur = 0
+start_swing = 0
+end_stance = 0
+end_swing = 0
 
 for i in range(N):
     action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
@@ -121,6 +128,26 @@ for i in range(N):
     # To get base position, for example: env.envs[0].env.robot.GetBasePosition() 
     p = env.envs[0].env.robot.GetBasePosition()
     pos_list[i,:] = p
+
+    ### task 4 ###
+    #record velocity
+    vel_list[i,:] = env.envs[0].env.robot.GetBaseLinearVelocity()
+    power_list[i] = np.abs(env.envs[0].env.robot.GetMotorTorques().dot(env.envs[0].env.robot.GetMotorVelocities()))
+    cot_list[i] = power_list[i]/(sum(env.envs[0].env.robot.GetTotalMassFromURDF())*9.81*np.linalg.norm(vel_list[i,:]))
+
+    #record swing and stange duration
+    if np.sin(env.envs[0].env._cpg.get_theta()[0]) <= 0 and ctr_step_dur == 0:
+        ctr_step_dur += 1
+    if np.sin(env.envs[0].env._cpg.get_theta()[0]) >= 0 and ctr_step_dur == 1:
+        start_swing = i
+        ctr_step_dur += 1
+    if np.sin(env.envs[0].env._cpg.get_theta()[0]) <= 0 and ctr_step_dur == 2:
+        end_swing = i
+        start_stance = i
+        ctr_step_dur += 1
+    if np.sin(env.envs[0].env._cpg.get_theta()[0]) >= 0 and ctr_step_dur == 3:
+        end_stance = i
+        ctr_step_dur += 1
     
 # [TODO] make plots:
 dic = {0:"x", 1:"y", 2:"z"}
@@ -139,7 +166,24 @@ for k in range(3):
   ax.set_xlabel("Time")
   ax.set_ylabel("Position")
 
+### task 4 ###
+avgvel = vel_list[int(0.5/TIME_STEP):, 0].mean()
+avgCOT = cot_list.mean()*10
+# fig, ax = plt.subplots(1,1, figsize = (8,6))
+# ax.plot(t,cot_list)
+# fig.show()
+# plt.show()
+print("################################################")
+print("avg vel : ", avgvel)
+print("total step duration (duty cycle) : ",(end_stance - start_swing)*TIME_STEP)
+print("stance duration : ",(end_stance - end_swing)*TIME_STEP)
+print("swing duration : ",(end_swing - start_swing)*TIME_STEP)
+print("duty ratio (stance/swing): ", (end_stance - start_stance)/(end_swing - start_swing))
+print("avg COT : ", avgCOT)
+print("################################################")
+
 fig.suptitle("Position of robot") #u03B8
 fig.show()
 plt.show()
-pass
+
+
