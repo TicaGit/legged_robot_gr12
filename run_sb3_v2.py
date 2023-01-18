@@ -57,7 +57,7 @@ USE_GPU = True # make sure to install all necessary drivers
 # after implementing, you will want to test how well the agent learns with your MDP: 
 env_configs = {"motor_control_mode":"CPG", # "PD","TORQUE", "CARTESIAN_PD", "CPG"
                "task_env": "LR_COURSE_TASK",
-               "observation_space_mode": "LR_COURSE_OBS",  #LR_COURSE_OBS
+               "observation_space_mode": "LR_SPEED",  #LR_COURSE_OBS
                "distance_weight": 2,
                "energy_weight" : 0.01,
                "yaw_weight": 0.05,
@@ -66,11 +66,12 @@ env_configs = {"motor_control_mode":"CPG", # "PD","TORQUE", "CARTESIAN_PD", "CPG
                "y_offset_weight": 0.05,
                "straightness_weight": 0.1,
                "vel_tracking_weight": 0.2, #modified form 0.075
-               "des_vel_x_input": 0.5}
+               "des_vel_x_input": 0.5,
+               "des_vel_x_max" : 1}
 
 argv = sys.argv[1:]
 try:
-    opts, args = getopt.getopt(argv, "", ["learning_algorithm=", "tracking_speed=", "motor_control_mode="])
+    opts, args = getopt.getopt(argv, "", ["learning_algorithm=", "tracking_speed=", "motor_control_mode=", "max_tracking_speed="])
 except:
     print("Error")
 
@@ -79,6 +80,8 @@ for opt, arg in opts:
         LEARNING_ALG = arg
     elif opt in ["--tracking_speed"]:
         env_configs["des_vel_x_input"] = float(arg)
+    elif opt in ["--max_tracking_speed="]:
+        env_configs["des_vel_x_max"] = float(arg)
     elif opt in ["--motor_control_mode"]:
         env_configs["motor_control_mode"] = arg
 

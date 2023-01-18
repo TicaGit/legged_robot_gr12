@@ -113,6 +113,8 @@ class QuadrupedGymEnv(gym.Env):
       straightness_weight = 0.1,
       vel_tracking_weight = 0.075,
       des_vel_x_input = 0.5,
+      des_vel_x_max = 1,
+      target_speed = [0.5],
 
       motor_control_mode="PD",          #ca
       task_env="FWD_LOCOMOTION",        #ca
@@ -161,7 +163,8 @@ class QuadrupedGymEnv(gym.Env):
     self._straightness_weight = straightness_weight
     self._vel_tracking_weight = vel_tracking_weight
     self._des_vel_x_input = des_vel_x_input
-
+    self._des_vel_x_max = des_vel_x_max
+    self._target_speed = target_speed
 
     self._motor_control_mode = motor_control_mode
     self._TASK_ENV = task_env
@@ -241,6 +244,22 @@ class QuadrupedGymEnv(gym.Env):
                                          np.array([0.0]*4), #contact
                                          np.array([0.0]*4), #r
                                          np.array([0.0]*4))) - OBSERVATION_EPS ) #theta
+
+    elif self._observation_space_mode == "LR_SPEED":
+      observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
+                                         self._robot_config.VELOCITY_LIMITS,
+                                         np.array([1.0]*4),
+                                         np.array([1.0]*4), #contact
+                                         np.array([1.0*5]*4), #r whats good max ?? here 5*mu_base = 5*1.0
+                                         np.array([2*np.pi]*4),
+                                         np.array([0.0]))) + OBSERVATION_EPS) #theta
+      observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
+                                         -self._robot_config.VELOCITY_LIMITS,
+                                         np.array([-1.0]*4),
+                                         np.array([0.0]*4), #contact
+                                         np.array([0.0]*4), #r
+                                         np.array([0.0]*4),
+                                         np.array([0.0]))) - OBSERVATION_EPS ) #theta
     else:
       raise ValueError("observation space not defined or not intended")
 
@@ -276,7 +295,17 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_r(), #np.array 4x1
                                           self._cpg.get_theta(), #np.array 4x1
                                           ))
-      #self._observation = np.zeros(50)
+      
+    elif self._observation_space_mode == "LR_SPEED":
+      self._target_speed = self._des_vel_x_input + (self.get_sim_time() / EPISODE_LENGTH) * (self._des_vel_x_max - self._des_vel_x_input)
+      self._observation = np.concatenate((self.robot.GetMotorAngles(), 
+                                          self.robot.GetMotorVelocities(),
+                                          self.robot.GetBaseOrientation(),
+                                          self.robot.GetContactInfo()[3], #np.array 4x1 of 1=contact or 0
+                                          self._cpg.get_r(), #np.array 4x1
+                                          self._cpg.get_theta(), #np.array 4x1,
+                                          np.array([self._target_speed]),
+                                          ))
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -375,12 +404,45 @@ class QuadrupedGymEnv(gym.Env):
 
     return max(reward,0) # keep rewards positive
 
+  def _reward_lr_speed(self, des_vel_x=0.5):
+    xyz = self.robot.GetBasePosition()
+    xyz_vel = self.robot.GetBaseLinearVelocity()
+    des_vel_x = self._target_speed
+    # track the desired velocity 
+    vel_tracking_reward = self._vel_tracking_weight * np.exp( -1/ 0.25 *  (xyz_vel[0] - des_vel_x)**2 )
+    # minimize yaw (go straight) - MODIF
+    yaw_reward = self._yaw_weight * np.exp( -1/ 0.25 * (self.robot.GetBaseOrientationRollPitchYaw()[2] - 0.0)**2)
+    # don't drift laterally on speed !!! - MODIF
+    drift_reward = self._drift_weight * np.exp( -1/ 0.25 *  (xyz_vel[1] - 0.0)**2 )
+    # minimize energy 
+    energy_reward = 0 
+    for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
+      energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
+
+    #NEW
+    #penalize z oscilations
+    z_oscil_reward = -self._z_oscillation_weight * (xyz_vel[2] - 0)**2 
+
+    #x_dist_reward = 0.1* xyz[0]
+    y_pos_penalty = - self._y_offset_weight * abs(xyz[1])
+
+    reward = vel_tracking_reward \
+            + yaw_reward \
+            + drift_reward \
+            + z_oscil_reward \
+            + y_pos_penalty \
+            - self._energy_weight * energy_reward \
+            - self._straightness_weight * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
+    return max(reward,0) # keep rewards positive
+
   def _reward(self):
     """ Get reward depending on task"""
     if self._TASK_ENV == "FWD_LOCOMOTION":
       return self._reward_fwd_locomotion()
     elif self._TASK_ENV == "LR_COURSE_TASK":
       return self._reward_lr_course()
+    elif self._TASK_ENV == "LR_SPEED":
+      return self._reward_lr_speed()
     else:
       raise ValueError("This task mode not implemented yet.")
 
