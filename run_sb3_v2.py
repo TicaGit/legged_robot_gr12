@@ -56,7 +56,7 @@ USE_GPU = True # make sure to install all necessary drivers
 
 # after implementing, you will want to test how well the agent learns with your MDP: 
 env_configs = {"motor_control_mode":"CPG", # "PD","TORQUE", "CARTESIAN_PD", "CPG"
-               "task_env": "LR_COURSE_TASK",
+               "task_env": "LR_SPEED",
                "observation_space_mode": "LR_SPEED",  #LR_COURSE_OBS
                "distance_weight": 2,
                "energy_weight" : 0.01,

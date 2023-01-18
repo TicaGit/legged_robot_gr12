@@ -58,7 +58,7 @@ TIME_STEP = 0.01
 LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
-log_dir = interm_dir + '010623192521697399'
+log_dir = interm_dir + '011823182712163148'
 
 custom = False
 if custom:
@@ -76,7 +76,10 @@ env_config['add_noise'] = False
 
 #added
 env_config["task_env"] = "LR_COURSE_TASK"       
-env_config["observation_space_mode"] = "LR_COURSE_OBS"
+env_config["observation_space_mode"] = "LR_SPEED"
+# env_config["target_speed"] = [0.5]
+#env_config["des_vel_x_input"] = 0.5,
+#env_config["des_vel_x_max"] = 1,
 
 # get latest model and normalization stats, and plot 
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")

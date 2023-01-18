@@ -114,7 +114,7 @@ class QuadrupedGymEnv(gym.Env):
       vel_tracking_weight = 0.075,
       des_vel_x_input = 0.5,
       des_vel_x_max = 1,
-      target_speed = [0.5],
+      target_speed = 0.5,
 
       motor_control_mode="PD",          #ca
       task_env="FWD_LOCOMOTION",        #ca
@@ -259,7 +259,7 @@ class QuadrupedGymEnv(gym.Env):
                                          np.array([0.0]*4), #contact
                                          np.array([0.0]*4), #r
                                          np.array([0.0]*4),
-                                         np.array([0.0]))) - OBSERVATION_EPS ) #theta
+                                         np.array([3.0]))) - OBSERVATION_EPS ) #theta
     else:
       raise ValueError("observation space not defined or not intended")
 
@@ -306,6 +306,10 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_theta(), #np.array 4x1,
                                           np.array([self._target_speed]),
                                           ))
+
+   #                                       def get_sim_time(self):
+    #""" Get current simulation time. """
+    #return self._sim_step_counter * self._time_step
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -408,6 +412,7 @@ class QuadrupedGymEnv(gym.Env):
     xyz = self.robot.GetBasePosition()
     xyz_vel = self.robot.GetBaseLinearVelocity()
     des_vel_x = self._target_speed
+    #print("Speed :", des_vel_x, "\n")
     # track the desired velocity 
     vel_tracking_reward = self._vel_tracking_weight * np.exp( -1/ 0.25 *  (xyz_vel[0] - des_vel_x)**2 )
     # minimize yaw (go straight) - MODIF
