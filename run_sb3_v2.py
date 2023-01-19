@@ -65,9 +65,9 @@ env_configs = {"motor_control_mode":"CPG", # "PD","TORQUE", "CARTESIAN_PD", "CPG
                "z_oscillation_weight": 2,
                "y_offset_weight": 0.05,
                "straightness_weight": 0.1,
-               "vel_tracking_weight": 0.2, #modified form 0.075
-               "des_vel_x_input": 0.5,
-               "des_vel_x_max" : 1}
+               "vel_tracking_weight": 1, #modified form 0.075 and then 0.2
+               "des_vel_x_input": 0.25,
+               "des_vel_x_max" : 2}
 
 argv = sys.argv[1:]
 try:

@@ -514,6 +514,7 @@ class QuadrupedGymEnv(gym.Env):
     """Scale RL action to CPG modulation parameters."""
     # clip RL actions to be between -1 and 1 (standard RL technique)
     u = np.clip(actions,-1,1)
+    #print("speed :", self._target_speed, "\n")
 
     # scale omega to ranges, and set in CPG (range is an example)
     omega = self._scale_helper( u[0:4], 4, 4.5*2*np.pi)
